@@ -135,7 +135,7 @@
 
 <script>
 const API_URL = "/api/chat";
-const MODEL = "claude-sonnet-4-6";
+const MODEL = "claude-3-5-sonnet-20240620";
 
 let state = {
   syllabus: "",
@@ -370,6 +370,11 @@ Exactly 4 options per question. correctIndex is 0-based. Keep explanations terse
     })
   });
   const data = await resp.json();
+  
+  if (data.error) {
+    throw new Error(data.error.message || JSON.stringify(data.error));
+  }
+  
   const textBlocks = (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('\n');
   let clean = textBlocks.trim().replace(/^```json/i,'').replace(/^```/,'').replace(/```$/,'').trim();
   const firstBrace = clean.indexOf('{');
