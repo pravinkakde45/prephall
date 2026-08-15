@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PrepHall — Adaptive Mock Test</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#10151c; --bg2:#161d26; --card:#1a222c; --card2:#212b37;
+    --line:#2a3441; --ink:#eef1f5; --dim:#8b97a8; --dim2:#5c6b7e;
+    --amber:#e8a33d; --green:#49b479; --red:#d9534f; --blue:#5b9bd9;
+    --disp:'Fraunces',serif; --mono:'IBM Plex Mono',monospace; --body:'Inter',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);min-height:100vh;}
+  #app{max-width:960px;margin:0 auto;padding:28px 20px 60px;}
+  h1,h2,h3{font-family:var(--disp);font-weight:700;margin:0 0 6px;}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--amber);margin-bottom:8px;}
+  .muted{color:var(--dim);}
+  .hidden{display:none !important;}
+  .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;padding-bottom:16px;border-bottom:1px solid var(--line);}
+  .brand{display:flex;align-items:baseline;gap:10px;}
+  .brand .mark{font-family:var(--mono);font-size:12px;color:var(--dim2);border:1px solid var(--line);padding:3px 7px;border-radius:3px;}
+  .clock{font-family:var(--mono);font-size:13px;color:var(--dim);cursor:pointer;}
+  .clock:hover{color:var(--ink);}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:24px;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  @media(max-width:640px){.grid2{grid-template-columns:1fr;}}
+  label.field{display:block;margin-bottom:18px;}
+  .field-label{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);margin-bottom:8px;display:block;}
+  textarea, select, input[type=number]{
+    width:100%;background:var(--bg2);border:1px solid var(--line);color:var(--ink);
+    padding:10px 12px;border-radius:6px;font-family:var(--body);font-size:14px;
+  }
+  textarea{resize:vertical;min-height:110px;line-height:1.5;}
+  textarea:focus,select:focus,input:focus{outline:2px solid var(--blue);outline-offset:1px;}
+  .pillrow{display:flex;gap:8px;flex-wrap:wrap;}
+  .pill{font-family:var(--mono);font-size:12.5px;padding:8px 14px;border-radius:20px;border:1px solid var(--line);background:var(--bg2);color:var(--dim);cursor:pointer;transition:.15s;}
+  .pill:hover{border-color:var(--dim2);color:var(--ink);}
+  .pill.active{background:var(--amber);border-color:var(--amber);color:#1a1206;font-weight:600;}
+  .pill.active.mode-c{background:var(--blue);border-color:var(--blue);color:#0a1520;}
+  .filebtn{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12.5px;color:var(--dim);border:1px dashed var(--line);padding:8px 12px;border-radius:6px;cursor:pointer;}
+  .filebtn:hover{border-color:var(--dim2);color:var(--ink);}
+  button.primary{
+    background:var(--amber);color:#1a1206;border:none;font-family:var(--body);font-weight:700;
+    padding:13px 22px;border-radius:7px;font-size:14.5px;cursor:pointer;transition:.15s;
+  }
+  button.primary:hover{filter:brightness(1.08);}
+  button.primary:disabled{opacity:.5;cursor:not-allowed;}
+  button.ghost{background:transparent;border:1px solid var(--line);color:var(--dim);padding:10px 16px;border-radius:7px;font-family:var(--body);cursor:pointer;font-size:13.5px;}
+  button.ghost:hover{color:var(--ink);border-color:var(--dim2);}
+  .rowend{display:flex;justify-content:flex-end;gap:10px;margin-top:8px;}
+  .navtabs{display:flex;gap:6px;margin-bottom:22px;}
+  .navtab{font-family:var(--mono);font-size:12px;text-transform:uppercase;letter-spacing:.06em;padding:8px 14px;border-radius:6px;color:var(--dim);cursor:pointer;border:1px solid transparent;}
+  .navtab.active{color:var(--ink);border-color:var(--line);background:var(--card);}
+
+  /* loading */
+  .loadwrap{text-align:center;padding:70px 20px;}
+  .spinner{width:38px;height:38px;border:3px solid var(--line);border-top-color:var(--amber);border-radius:50%;margin:0 auto 18px;animation:spin 1s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .loadmsg{font-family:var(--mono);font-size:13px;color:var(--dim);}
+
+  /* test screen */
+  .exam-shell{display:grid;grid-template-columns:1fr 220px;gap:18px;}
+  @media(max-width:760px){.exam-shell{grid-template-columns:1fr;}}
+  .exam-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
+  .timerbox{font-family:var(--mono);font-size:22px;font-weight:600;padding:7px 16px;border-radius:6px;border:1px solid var(--line);background:var(--bg2);letter-spacing:.03em;}
+  .timerbox.low{color:var(--red);border-color:var(--red);animation:pulse 1s infinite;}
+  @keyframes pulse{50%{opacity:.5;}}
+  .qmeta{font-family:var(--mono);font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px;display:flex;gap:10px;}
+  .qmeta span.tag{border:1px solid var(--line);padding:2px 8px;border-radius:12px;}
+  .qtext{font-size:16.5px;line-height:1.6;margin-bottom:16px;}
+  pre.codeblock{background:#0c1117;border:1px solid var(--line);border-radius:8px;padding:14px 16px;overflow-x:auto;font-family:var(--mono);font-size:13px;line-height:1.6;color:#c8d3e0;margin-bottom:16px;}
+  .options{display:flex;flex-direction:column;gap:10px;}
+  .opt{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:8px;cursor:pointer;transition:.12s;}
+  .opt:hover{border-color:var(--dim2);background:var(--card2);}
+  .opt.selected{border-color:var(--amber);background:#2a2416;}
+  .opt .letter{font-family:var(--mono);font-size:12px;color:var(--dim);border:1px solid var(--line);width:22px;height:22px;border-radius:5px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .opt.selected .letter{background:var(--amber);color:#1a1206;border-color:var(--amber);}
+  .examfoot{display:flex;justify-content:space-between;align-items:center;margin-top:20px;gap:10px;flex-wrap:wrap;}
+  .palette{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;height:fit-content;}
+  .palette-title{font-family:var(--mono);font-size:11px;text-transform:uppercase;color:var(--dim);letter-spacing:.06em;margin-bottom:10px;}
+  .pgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:14px;}
+  .pcell{aspect-ratio:1;border-radius:5px;font-family:var(--mono);font-size:11.5px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:1px solid var(--line);color:var(--dim);background:var(--bg2);}
+  .pcell.answered{background:var(--green);border-color:var(--green);color:#06180e;}
+  .pcell.marked{background:var(--amber);border-color:var(--amber);color:#1a1206;}
+  .pcell.current{outline:2px solid var(--blue);outline-offset:1px;}
+  .legend{font-family:var(--mono);font-size:10.5px;color:var(--dim);display:flex;flex-direction:column;gap:5px;}
+  .legend span{display:inline-flex;align-items:center;gap:6px;}
+  .dot{width:9px;height:9px;border-radius:2px;display:inline-block;}
+
+  /* result screen */
+  .scorehero{display:flex;align-items:center;gap:26px;margin-bottom:26px;flex-wrap:wrap;}
+  .scorenum{font-family:var(--mono);font-size:52px;font-weight:600;}
+  .scorenum.good{color:var(--green);} .scorenum.mid{color:var(--amber);} .scorenum.bad{color:var(--red);}
+  .breakdown-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:12.5px;}
+  .reviewq{border:1px solid var(--line);border-radius:8px;padding:16px;margin-bottom:12px;}
+  .reviewq .qtext{font-size:14.5px;margin-bottom:10px;}
+  .ans-line{font-size:13.5px;padding:6px 0;display:flex;gap:8px;}
+  .ans-line.correct{color:var(--green);} .ans-line.wrong{color:var(--red);}
+  .explain{font-size:12.5px;color:var(--dim);margin-top:6px;font-style:italic;}
+
+  /* progress */
+  .stats3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px;}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px;text-align:center;}
+  .stat .num{font-family:var(--mono);font-size:26px;font-weight:600;color:var(--amber);}
+  .stat .lbl{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin-top:4px;}
+  .barrow{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
+  .barmeta{font-family:var(--mono);font-size:11px;color:var(--dim);width:150px;flex-shrink:0;}
+  .bartrack{flex:1;background:var(--bg2);border-radius:4px;height:14px;overflow:hidden;border:1px solid var(--line);}
+  .barfill{height:100%;border-radius:4px;}
+  .barpct{font-family:var(--mono);font-size:11.5px;width:38px;text-align:right;flex-shrink:0;}
+  .empty{text-align:center;padding:50px 20px;color:var(--dim);}
+  .errbox{border:1px solid var(--red);background:#2a1414;border-radius:8px;padding:16px;color:#f0a8a8;font-size:13.5px;margin-top:14px;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="topbar">
+    <div class="brand"><h2 style="margin:0;">PrepHall</h2><span class="mark">EXAM SIM</span></div>
+    <div class="navtabs" id="navtabs">
+      <div class="navtab active" data-nav="setup">New Test</div>
+      <div class="navtab" data-nav="progress">Progress</div>
+    </div>
+  </div>
+
+  <div id="screen-setup"></div>
+  <div id="screen-loading" class="hidden"></div>
+  <div id="screen-test" class="hidden"></div>
+  <div id="screen-result" class="hidden"></div>
+  <div id="screen-progress" class="hidden"></div>
+</div>
+
+<script>
+const API_URL = "/api/chat";
+const MODEL = "claude-sonnet-4-6";
+
+let state = {
+  syllabus: "",
+  mode: "syllabus",       // syllabus | aptitude | coding | mixed
+  company: "generic",     // tcs | hcl | infosys | wipro | generic
+  difficulty: "medium",
+  numQuestions: 10,
+  questions: [],
+  answers: {},
+  marked: {},
+  current: 0,
+  timeLeft: 0,
+  timerId: null,
+  startedAt: null,
+};
+
+const $ = sel => document.querySelector(sel);
+const el = (tag, cls, html) => { const e = document.createElement(tag); if(cls) e.className = cls; if(html!==undefined) e.innerHTML = html; return e; };
+
+// ---------- NAV ----------
+document.getElementById('navtabs').addEventListener('click', (e) => {
+  const t = e.target.closest('.navtab'); if(!t) return;
+  document.querySelectorAll('.navtab').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active');
+  if(t.dataset.nav === 'setup') showScreen('setup'); else { renderProgress(); showScreen('progress'); }
+});
+
+function showScreen(name){
+  ['setup','loading','test','result','progress'].forEach(s=>{
+    document.getElementById('screen-'+s).classList.toggle('hidden', s!==name);
+  });
+}
+
+// ---------- SETUP SCREEN ----------
+function renderSetup(){
+  const s = $('#screen-setup');
+  s.innerHTML = `
+    <div class="eyebrow">Configure Mock</div>
+    <h1>Build your mock test</h1>
+    <p class="muted" style="margin-bottom:22px;">Upload or paste your syllabus, pick a mode and difficulty — PrepHall writes the paper and times it like a real exam.</p>
+    <div class="card">
+      <label class="field">
+        <span class="field-label">01 · Test mode</span>
+        <div class="pillrow" id="pill-mode">
+          <div class="pill" data-mode="syllabus">Syllabus-based</div>
+          <div class="pill" data-mode="aptitude">Aptitude</div>
+          <div class="pill" data-mode="coding">Coding round</div>
+          <div class="pill" data-mode="mixed">Mixed (full paper)</div>
+        </div>
+      </label>
+
+      <div id="syllabus-field" class="field">
+        <span class="field-label">02 · Syllabus</span>
+        <textarea id="syllabus-text" placeholder="Paste your syllabus / topic list here (e.g. DBMS: Normalization, SQL joins, ACID; OS: Scheduling, Deadlocks...)"></textarea>
+        <div style="margin-top:8px;display:flex;align-items:center;gap:10px;">
+          <label class="filebtn">Upload .txt
+            <input type="file" id="file-input" accept=".txt" style="display:none;">
+          </label>
+          <span class="muted" style="font-size:12px;" id="file-status"></span>
+        </div>
+      </div>
+
+      <div id="company-field" class="field hidden">
+        <span class="field-label">Company exam pattern</span>
+        <div class="pillrow" id="pill-company">
+          <div class="pill" data-company="tcs">TCS NQT</div>
+          <div class="pill" data-company="hcl">HCLTech</div>
+          <div class="pill" data-company="infosys">Infosys</div>
+          <div class="pill" data-company="wipro">Wipro Elite</div>
+          <div class="pill" data-company="generic">Generic MNC</div>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <label class="field">
+          <span class="field-label">03 · Difficulty</span>
+          <div class="pillrow" id="pill-diff">
+            <div class="pill" data-diff="easy">Easy</div>
+            <div class="pill" data-diff="medium">Medium</div>
+            <div class="pill" data-diff="hard">Hard</div>
+          </div>
+        </label>
+        <label class="field">
+          <span class="field-label">04 · Number of questions</span>
+          <input type="number" id="num-q" min="4" max="24" value="10">
+        </label>
+      </div>
+
+      <div id="est-time" class="muted" style="font-family:var(--mono);font-size:12.5px;margin-bottom:6px;"></div>
+      <div id="setup-error"></div>
+      <div class="rowend">
+        <button class="primary" id="start-btn">Generate mock test →</button>
+      </div>
+    </div>
+  `;
+
+  // mode pills
+  s.querySelectorAll('#pill-mode .pill').forEach(p=>{
+    p.classList.toggle('active', p.dataset.mode===state.mode);
+    p.onclick = ()=>{ state.mode = p.dataset.mode; renderSetup(); };
+  });
+  $('#syllabus-field').classList.toggle('hidden', state.mode==='aptitude' || state.mode==='coding');
+  $('#company-field').classList.toggle('hidden', state.mode==='syllabus');
+
+  s.querySelectorAll('#pill-company .pill').forEach(p=>{
+    p.classList.toggle('active', p.dataset.company===state.company);
+    p.onclick = ()=>{ state.company = p.dataset.company; renderSetup(); };
+  });
+  s.querySelectorAll('#pill-diff .pill').forEach(p=>{
+    p.classList.toggle('active', p.dataset.diff===state.difficulty);
+    p.onclick = ()=>{ state.difficulty = p.dataset.diff; renderSetup(); };
+  });
+
+  $('#syllabus-text').value = state.syllabus;
+  $('#syllabus-text').oninput = (e)=> state.syllabus = e.target.value;
+  $('#num-q').value = state.numQuestions;
+  $('#num-q').oninput = (e)=>{ state.numQuestions = Math.max(4, Math.min(24, parseInt(e.target.value)||10)); updateEstimate(); };
+  $('#file-input').onchange = (e)=>{
+    const f = e.target.files[0]; if(!f) return;
+    const reader = new FileReader();
+    reader.onload = ()=>{ state.syllabus = reader.result; $('#syllabus-text').value = state.syllabus; $('#file-status').textContent = 'Loaded: '+f.name; };
+    reader.readAsText(f);
+  };
+
+  updateEstimate();
+  $('#start-btn').onclick = beginGeneration;
+}
+
+function estimateMinutes(){
+  const perQ = {easy:1, medium:1.5, hard:2}[state.difficulty];
+  const codeBonus = (state.mode==='coding' || state.mode==='mixed') ? 0.5 : 0;
+  return Math.max(5, Math.round(state.numQuestions * (perQ + codeBonus)));
+}
+function updateEstimate(){
+  const mins = estimateMinutes();
+  $('#est-time').textContent = `⏱ Estimated exam time: ${mins} min for ${state.numQuestions} questions (${state.difficulty})`;
+}
+
+// ---------- GENERATION ----------
+async function beginGeneration(){
+  $('#setup-error').innerHTML = '';
+  if(state.mode==='syllabus' && !state.syllabus.trim()){
+    $('#setup-error').innerHTML = `<div class="errbox">Paste or upload your syllabus first — or switch to Aptitude / Coding mode.</div>`;
+    return;
+  }
+  showScreen('loading');
+  renderLoading();
+  try{
+    const batchSize = 6;
+    const total = state.numQuestions;
+    let batches = Math.ceil(total/batchSize);
+    let all = [];
+    for(let b=0; b<batches; b++){
+      const count = Math.min(batchSize, total - all.length);
+      updateLoadingMsg(`Setting exam paper — batch ${b+1} of ${batches}...`);
+      const qs = await requestQuestionBatch(count, all.length);
+      all = all.concat(qs);
+    }
+    all.forEach((q,i)=> q.id = i+1);
+    state.questions = all;
+    state.answers = {}; state.marked = {}; state.current = 0;
+    state.timeLeft = estimateMinutes()*60;
+    state.startedAt = Date.now();
+    renderTest();
+    showScreen('test');
+    startTimer();
+  }catch(err){
+    renderLoadingError(err);
+  }
+}
+
+function renderLoading(){
+  $('#screen-loading').innerHTML = `<div class="loadwrap"><div class="spinner"></div><div class="loadmsg" id="loadmsg">Preparing your paper...</div></div>`;
+}
+function updateLoadingMsg(msg){ const m = $('#loadmsg'); if(m) m.textContent = msg; }
+function renderLoadingError(err){
+  $('#screen-loading').innerHTML = `<div class="loadwrap">
+    <div class="errbox">Couldn't generate the test (${(err&&err.message)||'unknown error'}). This can happen with a flaky connection or an odd model response.</div>
+    <div style="margin-top:16px;"><button class="primary" onclick="beginGeneration()">Retry</button> <button class="ghost" onclick="showScreen('setup')">Back to setup</button></div>
+  </div>`;
+}
+
+function companyStyleHint(){
+  const map = {
+    tcs: "TCS NQT pattern: Numerical Ability, Logical Reasoning, Verbal Ability, and Programming Logic. Favor data-interpretation-lite quant and syllogism/blood-relation style reasoning.",
+    hcl: "HCLTech entrance pattern: Quantitative Aptitude, Logical Reasoning, English usage, and basic output-prediction coding questions.",
+    infosys: "Infosys pattern: Quant (probability, time-speed-distance), Logical Reasoning (puzzles), Verbal, and pseudocode/output-prediction questions.",
+    wipro: "Wipro Elite NTH pattern: Quantitative Aptitude, Logical Reasoning, Verbal Ability, and code-output-prediction questions.",
+    generic: "Generic Indian IT-services entrance exam pattern: mixed quantitative aptitude, logical reasoning, verbal ability, and programming fundamentals."
+  };
+  return map[state.company] || map.generic;
+}
+
+async function requestQuestionBatch(count, alreadyGenerated){
+  let userPrompt = "";
+  const diffLine = `Difficulty level: ${state.difficulty}.`;
+
+  if(state.mode === 'syllabus'){
+    userPrompt = `Generate ${count} multiple-choice mock exam questions strictly based on the following syllabus/topics. ${diffLine}
+Syllabus:
+"""${state.syllabus.slice(0,6000)}"""
+Cover different topics from the syllabus, avoid repeating the same sub-topic. Category for every question must be "syllabus".`;
+  } else if(state.mode === 'aptitude'){
+    userPrompt = `Generate ${count} multiple-choice aptitude questions in the style of an Indian MNC IT-services campus placement test. ${companyStyleHint()} ${diffLine}
+Mix categories across "quant", "logical", "verbal" — set the "category" field accordingly per question.`;
+  } else if(state.mode === 'coding'){
+    userPrompt = `Generate ${count} multiple-choice coding/programming questions in the style of an Indian MNC IT-services placement coding round (output prediction, find-the-bug, time complexity, basic DSA/pseudocode). ${companyStyleHint()} ${diffLine}
+Every question must include a short "code" field with a realistic code snippet (C/Java/Python, pick sensibly per question) that the options are about. Category must be "coding".`;
+  } else { // mixed
+    userPrompt = `Generate ${count} multiple-choice questions for a full MNC campus placement mock paper. ${companyStyleHint()} ${diffLine}
+Distribute roughly evenly across categories "quant", "logical", "verbal", "coding"${state.syllabus.trim() ? ', and "syllabus" (based on the syllabus below)' : ''}.
+${state.syllabus.trim() ? `Syllabus for "syllabus" category questions:\n"""${state.syllabus.slice(0,4000)}"""` : ''}
+For "coding" category questions, include a short "code" field with a snippet the question refers to; for all other categories set "code" to an empty string.`;
+  }
+
+  userPrompt += `
+
+This is batch continuation — ${alreadyGenerated} questions already generated in earlier batches, make these ${count} meaningfully different in wording and sub-topic.
+
+Respond with ONLY minified JSON (no markdown fences, no prose, no explanation outside the JSON) matching exactly this schema:
+{"questions":[{"category":"syllabus|quant|logical|verbal|coding","topic":"short topic label, 2-4 words","difficulty":"${state.difficulty}","question":"question text, no code inside it","code":"code snippet or empty string","options":["opt A","opt B","opt C","opt D"],"correctIndex":0,"explanation":"under 20 words"}]}
+Exactly 4 options per question. correctIndex is 0-based. Keep explanations terse.`;
+
+  const resp = await fetch(API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: MODEL,
+      max_tokens: 1000,
+      system: "You generate mock exam questions for Indian engineering students preparing for MNC placement tests. Output strictly valid minified JSON only, matching the requested schema exactly. No markdown code fences, no commentary before or after the JSON.",
+      messages: [{ role: "user", content: userPrompt }]
+    })
+  });
+  const data = await resp.json();
+  const textBlocks = (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('\n');
+  let clean = textBlocks.trim().replace(/^```json/i,'').replace(/^```/,'').replace(/```$/,'').trim();
+  const firstBrace = clean.indexOf('{');
+  const lastBrace = clean.lastIndexOf('}');
+  if(firstBrace >= 0 && lastBrace > firstBrace) clean = clean.slice(firstBrace, lastBrace+1);
+  const parsed = JSON.parse(clean);
+  if(!parsed.questions || !Array.isArray(parsed.questions) || parsed.questions.length===0) throw new Error("Empty question set returned");
+  return parsed.questions;
+}
+
+// ---------- TEST SCREEN ----------
+function startTimer(){
+  clearInterval(state.timerId);
+  state.timerId = setInterval(()=>{
+    state.timeLeft--;
+    updateTimerDisplay();
+    if(state.timeLeft <= 0){ clearInterval(state.timerId); submitTest(true); }
+  }, 1000);
+}
+function updateTimerDisplay(){
+  const box = $('#timer-display'); if(!box) return;
+  const m = Math.floor(state.timeLeft/60), s = state.timeLeft%60;
+  box.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  box.classList.toggle('low', state.timeLeft <= 30);
+}
+
+function renderTest(){
+  const s = $('#screen-test');
+  s.innerHTML = `
+    <div class="exam-header">
+      <div>
+        <div class="eyebrow">${modeLabel()} · ${state.difficulty}</div>
+        <h2 style="margin:0;">Mock Exam</h2>
+      </div>
+      <div class="timerbox" id="timer-display">--:--</div>
+    </div>
+    <div class="exam-shell">
+      <div class="card" id="q-panel"></div>
+      <div class="palette" id="q-palette"></div>
+    </div>
+  `;
+  updateTimerDisplay();
+  renderQuestion();
+  renderPalette();
+}
+
+function modeLabel(){
+  return {syllabus:'Syllabus mock', aptitude:'Aptitude round', coding:'Coding round', mixed:'Full mock paper'}[state.mode];
+}
+function catLabel(c){
+  return {syllabus:'Syllabus', quant:'Quant', logical:'Reasoning', verbal:'Verbal', coding:'Coding'}[c] || c;
+}
+
+function renderQuestion(){
+  const q = state.questions[state.current];
+  const panel = $('#q-panel');
+  panel.innerHTML = `
+    <div class="qmeta">
+      <span>Question ${state.current+1} / ${state.questions.length}</span>
+      <span class="tag">${catLabel(q.category)}</span>
+      <span class="tag">${q.topic}</span>
+    </div>
+    <div class="qtext">${escapeHtml(q.question)}</div>
+    ${q.code ? `<pre class="codeblock">${escapeHtml(q.code)}</pre>` : ''}
+    <div class="options" id="opt-list"></div>
+    <div class="examfoot">
+      <div>
+        <button class="ghost" id="prev-btn" ${state.current===0?'disabled':''}>← Previous</button>
+        <button class="ghost" id="mark-btn">${state.marked[q.id] ? 'Unmark' : '⚑ Mark for review'}</button>
+      </div>
+      <div>
+        ${state.current === state.questions.length-1
+          ? `<button class="primary" id="submit-btn">Submit test</button>`
+          : `<button class="primary" id="next-btn">Next →</button>`}
+      </div>
+    </div>
+  `;
+  const optList = $('#opt-list');
+  q.options.forEach((opt,i)=>{
+    const div = el('div','opt'+(state.answers[q.id]===i?' selected':''), `<span class="letter">${String.fromCharCode(65+i)}</span><span>${escapeHtml(opt)}</span>`);
+    div.onclick = ()=>{ state.answers[q.id]=i; renderQuestion(); renderPalette(); };
+    optList.appendChild(div);
+  });
+  if($('#prev-btn')) $('#prev-btn').onclick = ()=>{ state.current--; renderQuestion(); renderPalette(); };
+  if($('#next-btn')) $('#next-btn').onclick = ()=>{ state.current++; renderQuestion(); renderPalette(); };
+  $('#mark-btn').onclick = ()=>{ state.marked[q.id] = !state.marked[q.id]; renderQuestion(); renderPalette(); };
+  if($('#submit-btn')) $('#submit-btn').onclick = ()=> submitTest(false);
+}
+
+function renderPalette(){
+  const p = $('#q-palette');
+  const answered = Object.keys(state.answers).length;
+  let grid = '';
+  state.questions.forEach((q,i)=>{
+    let cls = 'pcell';
+    if(state.marked[q.id]) cls += ' marked';
+    else if(state.answers[q.id] !== undefined) cls += ' answered';
+    if(i===state.current) cls += ' current';
+    grid += `<div class="${cls}" data-i="${i}">${i+1}</div>`;
+  });
+  p.innerHTML = `
+    <div class="palette-title">Question palette</div>
+    <div class="pgrid">${grid}</div>
+    <div class="legend">
+      <span><span class="dot" style="background:var(--green);"></span>Answered (${answered})</span>
+      <span><span class="dot" style="background:var(--amber);"></span>Marked (${Object.values(state.marked).filter(Boolean).length})</span>
+      <span><span class="dot" style="background:var(--bg2);border:1px solid var(--line);"></span>Not visited</span>
+    </div>
+    <button class="primary" style="width:100%;margin-top:14px;" id="palette-submit">Submit test</button>
+  `;
+  p.querySelectorAll('.pcell').forEach(c=>{
+    c.onclick = ()=>{ state.current = parseInt(c.dataset.i); renderQuestion(); renderPalette(); };
+  });
+  $('#palette-submit').onclick = ()=> submitTest(false);
+}
+
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+// ---------- SUBMIT / RESULT ----------
+async function submitTest(auto){
+  clearInterval(state.timerId);
+  const timeTakenSec = Math.max(0, Math.round((Date.now()-state.startedAt)/1000));
+  let correct = 0;
+  const catStats = {};
+  const reviewRows = state.questions.map(q=>{
+    const chosen = state.answers[q.id];
+    const isCorrect = chosen === q.correctIndex;
+    if(isCorrect) correct++;
+    const c = q.category;
+    catStats[c] = catStats[c] || {correct:0,total:0};
+    catStats[c].total++;
+    if(isCorrect) catStats[c].correct++;
+    return {q, chosen, isCorrect};
+  });
+  const total = state.questions.length;
+  const scorePct = total ? Math.round((correct/total)*100) : 0;
+
+  const attempt = {
+    id: Date.now(),
+    date: new Date().toISOString(),
+    mode: state.mode,
+    company: state.company,
+    difficulty: state.difficulty,
+    total, correct, scorePct,
+    timeTakenSec,
+    autoSubmitted: !!auto,
+    catStats
+  };
+  await saveAttempt(attempt);
+  renderResult(attempt, reviewRows, auto);
+  showScreen('result');
+}
+
+function renderResult(attempt, reviewRows, auto){
+  const s = $('#screen-result');
+  const scoreClass = attempt.scorePct>=70?'good':attempt.scorePct>=40?'mid':'bad';
+  let catHtml = Object.entries(attempt.catStats).map(([cat,st])=>`
+    <div class="breakdown-row"><span>${catLabel(cat)}</span><span>${st.correct}/${st.total}</span></div>
+  `).join('');
+  let reviewHtml = reviewRows.map((r,i)=>{
+    const q = r.q;
+    return `<div class="reviewq">
+      <div class="qmeta"><span>Q${i+1}</span><span class="tag">${catLabel(q.category)}</span><span class="tag">${q.topic}</span></div>
+      <div class="qtext">${escapeHtml(q.question)}</div>
+      ${q.code ? `<pre class="codeblock">${escapeHtml(q.code)}</pre>` : ''}
+      <div class="ans-line ${r.isCorrect?'correct':'wrong'}">${r.isCorrect?'✓':'✗'} Your answer: ${r.chosen!==undefined ? escapeHtml(q.options[r.chosen]) : '(not answered)'}</div>
+      ${!r.isCorrect ? `<div class="ans-line correct">✓ Correct answer: ${escapeHtml(q.options[q.correctIndex])}</div>` : ''}
+      <div class="explain">${escapeHtml(q.explanation||'')}</div>
+    </div>`;
+  }).join('');
+
+  s.innerHTML = `
+    <div class="eyebrow">${auto ? 'Time up — auto-submitted' : 'Submitted'}</div>
+    <h1>Result</h1>
+    <div class="card" style="margin-bottom:22px;">
+      <div class="scorehero">
+        <div class="scorenum ${scoreClass}">${attempt.scorePct}%</div>
+        <div>
+          <div style="font-family:var(--mono);font-size:14px;">${attempt.correct} / ${attempt.total} correct</div>
+          <div class="muted" style="font-size:13px;">${modeLabelFor(attempt.mode)} · ${attempt.difficulty} · ${Math.floor(attempt.timeTakenSec/60)}m ${attempt.timeTakenSec%60}s taken</div>
+        </div>
+      </div>
+      <div class="field-label" style="margin-top:6px;">Category breakdown</div>
+      ${catHtml}
+      <div class="rowend">
+        <button class="ghost" onclick="document.getElementById('navtabs').querySelector('[data-nav=progress]').click()">View progress</button>
+        <button class="primary" onclick="showScreen('setup')">New mock test</button>
+      </div>
+    </div>
+    <h3>Answer review</h3>
+    ${reviewHtml}
+  `;
+}
+function modeLabelFor(m){ return {syllabus:'Syllabus mock', aptitude:'Aptitude round', coding:'Coding round', mixed:'Full mock paper'}[m]; }
+
+// ---------- PROGRESS (persistent storage) ----------
+async function getAttempts(){
+  try{
+    const res = localStorage.getItem('attempts');
+    if(!res) return [];
+    return JSON.parse(res);
+  }catch(e){ return []; }
+}
+async function saveAttempt(attempt){
+  try{
+    const list = await getAttempts();
+    list.push(attempt);
+    localStorage.setItem('attempts', JSON.stringify(list));
+  }catch(e){ console.error('progress save failed', e); }
+}
+
+async function renderProgress(){
+  const s = $('#screen-progress');
+  s.innerHTML = `<div class="eyebrow">Your record</div><h1>Progress report</h1><div id="prog-body" class="muted">Loading...</div>`;
+  const attempts = await getAttempts();
+  const body = $('#prog-body');
+  if(attempts.length === 0){
+    body.innerHTML = `<div class="empty">No mock tests taken yet. Start one from the New Test tab — every attempt is tracked here automatically.</div>`;
+    return;
+  }
+  const avg = Math.round(attempts.reduce((a,x)=>a+x.scorePct,0)/attempts.length);
+  const best = Math.max(...attempts.map(x=>x.scorePct));
+  body.innerHTML = `
+    <div class="stats3">
+      <div class="stat"><div class="num">${attempts.length}</div><div class="lbl">Tests taken</div></div>
+      <div class="stat"><div class="num">${avg}%</div><div class="lbl">Average score</div></div>
+      <div class="stat"><div class="num">${best}%</div><div class="lbl">Best score</div></div>
+    </div>
+    <h3>Attempt history</h3>
+    <div id="bars"></div>
+    <div class="rowend"><button class="ghost" id="clear-history">Clear history</button></div>
+  `;
+  const bars = $('#bars');
+  attempts.slice().reverse().forEach(a=>{
+    const color = a.scorePct>=70?'var(--green)':a.scorePct>=40?'var(--amber)':'var(--red)';
+    const d = new Date(a.date);
+    const row = el('div','barrow');
+    row.innerHTML = `
+      <div class="barmeta">${d.toLocaleDateString()} · ${modeLabelFor(a.mode)}</div>
+      <div class="bartrack"><div class="barfill" style="width:${a.scorePct}%;background:${color};"></div></div>
+      <div class="barpct">${a.scorePct}%</div>
+    `;
+    bars.appendChild(row);
+  });
+  $('#clear-history').onclick = async ()=>{
+    if(!confirm('Clear all progress history? This cannot be undone.')) return;
+    try{ localStorage.setItem('attempts', JSON.stringify([])); renderProgress(); }catch(e){}
+  };
+}
+
+// ---------- INIT ----------
+renderSetup();
+</script>
+</body>
+</html>
